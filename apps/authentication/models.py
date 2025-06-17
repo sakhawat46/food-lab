@@ -3,6 +3,8 @@ from django.contrib.auth.base_user import BaseUserManager
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
+from datetime import timedelta
+import random
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password, **extra_fields):
@@ -40,6 +42,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = "email"
 
     objects = UserManager()
+
+    def generate_otp(self):
+        self.otp = str(random.randint(100000, 999999))  # Generate 6-digit OTP
+        self.otp_exp = timezone.now() + timedelta(minutes=10)
+        self.otp_verified = False
+        self.save()
 
     def __str__(self):
         return self.email
