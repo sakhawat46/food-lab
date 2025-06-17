@@ -3,9 +3,15 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import SignupSerializer, LoginSerializer, ProfileSerializer
+from .serializers import SignupSerializer, LoginSerializer, ProfileSerializer, ChangePasswordSerializer
 from .models import Profile
+from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from .serializers import PasswordResetRequestSerializer, OTPVerificationSerializer, PasswordResetSerializer
 
+User = get_user_model()
 
 class SignupView(APIView):
     def post(self, request):
@@ -33,17 +39,24 @@ class LoginView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+
+
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        refresh_token = request.data.get("refresh")
+
+        if not refresh_token:
+            return Response({"detail": "Refresh token required"}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            refresh_token = request.data["refresh"]
             token = RefreshToken(refresh_token)
             token.blacklist()
-            return Response({"message": "Successfully logged out"}, status=status.HTTP_205_RESET_CONTENT)
-        except Exception:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Logged out successfully"}, status=status.HTTP_205_RESET_CONTENT)
+        except TokenError as e:
+            return Response({"detail": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProfileView(APIView):
@@ -61,3 +74,84 @@ class ProfileView(APIView):
             serializer.save()
             return Response({"message": "Profile updated"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class ChangePassword(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
+
+    def put(self, request, pk):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        old_password = serializer.validated_data["old_password"]
+        new_password = serializer.validated_data["new_password"]
+
+        try:
+            obj = request.user
+            print(obj)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        if not obj.check_password(old_password):
+            return Response({"error": "Old password does not match"}, status=400)
+
+        obj.set_password(new_password)
+        obj.save()
+        return Response({"success": "Password changed successfully"}, status=200)
+
+
+
+
+class PasswordResetRequestAPIView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            return Response(
+                {"success": True, "message": "OTP sent to email."}, 
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            {"success": False, "errors": serializer.errors}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+
+class OTPVerificationAPIView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        serializer = OTPVerificationSerializer(data=request.data)
+        if serializer.is_valid():
+            return Response(
+                {"success": True, "message": "OTP verified successfully."},
+                status=status.HTTP_200_OK,
+            )
+        return Response(
+            {"success": False, "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+
+
+class PasswordResetAPIView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"success": True, "message": "Password reset successfully."},
+                status=status.HTTP_200_OK,
+            )
+        return Response(
+            {"success": False, "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
