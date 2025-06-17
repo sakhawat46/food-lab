@@ -1,8 +1,11 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Profile
+from django.core.mail import send_mail
+from django.utils.timezone import now, timedelta
 
 User = get_user_model()
+
 
 class SignupSerializer(serializers.ModelSerializer):
     name = serializers.CharField(write_only=True)
@@ -17,6 +20,15 @@ class SignupSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data['password'] != data['confirm_password']:
             raise serializers.ValidationError("Passwords do not match.")
+
+        # Check email uniqueness
+        if User.objects.filter(email=data['email']).exists():
+            raise serializers.ValidationError({"email": "This email is already in use."})
+
+        # Check mobile_number uniqueness
+        if Profile.objects.filter(mobile_number=data['mobile_number']).exists():
+            raise serializers.ValidationError({"mobile_number": "This mobile number is already in use."})
+
         return data
 
     def create(self, validated_data):
@@ -36,11 +48,12 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField()
 
 
+
+
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         exclude = ['user', 'created_at', 'updated_at']
-
 
 
 
@@ -49,10 +62,6 @@ class ChangePasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(required=True)
 
 
-
-
-from django.core.mail import send_mail
-from django.utils.timezone import now, timedelta 
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):

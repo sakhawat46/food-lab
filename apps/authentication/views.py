@@ -5,8 +5,12 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import SignupSerializer, LoginSerializer, ProfileSerializer, ChangePasswordSerializer
 from .models import Profile
-
 from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from .serializers import PasswordResetRequestSerializer, OTPVerificationSerializer, PasswordResetSerializer
+
 User = get_user_model()
 
 class SignupView(APIView):
@@ -36,7 +40,7 @@ class LoginView(APIView):
 
 
 
-from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+
 
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -73,8 +77,6 @@ class ProfileView(APIView):
 
 
 
-from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
 
 class ChangePassword(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -102,8 +104,6 @@ class ChangePassword(generics.GenericAPIView):
 
 
 
-
-from .serializers import PasswordResetRequestSerializer, OTPVerificationSerializer, PasswordResetSerializer
 
 class PasswordResetRequestAPIView(APIView):
     permission_classes = []
