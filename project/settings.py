@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     #created apps by sakhawat
     'apps.authentication',
     'apps.seller',
+    'apps.seller_profile',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
 ]
