@@ -66,12 +66,25 @@ class ShopDocumentAPIView(APIView):
         serializer = ShopDocumentSerializer(document)
         return Response(serializer.data)
 
+
     def post(self, request):
         shop = get_object_or_404(Shop, owner=request.user)
-        serializer = ShopDocumentSerializer(data=request.data, context={'shop': shop})
+        data = request.data.copy()
+
+        try:
+            # Try to get existing document for this shop
+            document = shop.documents
+            serializer = ShopDocumentSerializer(document, data=data, partial=True)
+        except ShopDocument.DoesNotExist:
+            # If no document exists, create a new one
+            serializer = ShopDocumentSerializer(data=data)
+
         if serializer.is_valid():
             serializer.save(shop=shop)
-            return Response(serializer.data, status=201)
+            return Response({
+                "message": "Documents saved successfully",
+                "data": serializer.data
+            }, status=201)
         return Response(serializer.errors, status=400)
 
     def put(self, request):
