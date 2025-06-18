@@ -6,6 +6,7 @@ from django.utils import timezone
 from datetime import timedelta
 import random
 
+
 class UserManager(BaseUserManager):
     def create_user(self, email, password, **extra_fields):
         if not email:
@@ -29,7 +30,6 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     USER_TYPE_CHOICES = [
-        ('admin', 'Admin'),
         ('seller', 'Seller'),
         ('customer', 'Customer'),
     ]
@@ -39,7 +39,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
-    user_type = models.CharField(max_length=50, choices=USER_TYPE_CHOICES, default='customer')
+    user_type = models.CharField(max_length=50, choices=USER_TYPE_CHOICES)
     date_joined = models.DateTimeField(default=timezone.now)
 
     otp = models.CharField(max_length=6, blank=True, null=True)
@@ -61,11 +61,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     
 
 
-class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+class SellerProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='seller_profile')
     name = models.CharField(max_length=255)
     mobile_number = models.CharField(unique=True)
-
     dob = models.DateField(null=True, blank=True)
     national_insurance_number = models.CharField(max_length=50, null=True, blank=True)
     nationality = models.CharField(max_length=100, null=True, blank=True)
@@ -79,3 +78,19 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.name
+    
+
+class CustomerProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer_profile')
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
+    dob = models.DateField(null=True, blank=True)
+    mobile_number = models.CharField(unique=True)
+    address = models.CharField(max_length=256, null=True, blank=True)
+    postcode = models.CharField(max_length=20, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.first_name
