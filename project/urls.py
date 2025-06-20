@@ -9,6 +9,8 @@ urlpatterns = [
     path('api/v1/', include('apps.authentication.urls')),
     path('api/v1/', include('apps.seller.urls')),
     path('api/v1/', include('apps.seller_profile.urls')),
+    path('api/v1/', include('apps.chatting.urls')),
+    path('api/v1/', include('apps.crave.urls')),
 ]
 
 
