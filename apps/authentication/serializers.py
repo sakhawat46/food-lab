@@ -53,7 +53,7 @@ class SignupSerializer(serializers.Serializer):
         if user_type == 'seller':
             SellerProfile.objects.create(user=user, name=validated_data['name'], mobile_number=validated_data['mobile_number'])
         else:
-            CustomerProfile.objects.create(user=user, fist_name=validated_data['name'], mobile_number=validated_data['mobile_number'], last_name="")
+            CustomerProfile.objects.create(user=user, first_name=validated_data['name'], mobile_number=validated_data['mobile_number'], last_name="")
 
         return user
 

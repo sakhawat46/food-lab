@@ -42,8 +42,12 @@ INSTALLED_APPS = [
     'apps.authentication',
     'apps.seller',
     'apps.seller_profile',
+    'apps.chatting',
+    'apps.crave',
+
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
+    'channels',
 ]
 
 # Rest Framework
@@ -152,3 +156,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+
+ASGI_APPLICATION = "project.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"  # Use Redis in production
+    }
+}
