@@ -1,13 +1,16 @@
 from django.shortcuts import render
 from django.http import HttpResponse
-
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.shortcuts import get_object_or_404
-from .models import Product
-from .serializers import ProductSerializer
-
+from .models import Product,OrderItem, Order,ProductReview
+from .serializers import ProductSerializer,OrderItemSerializer, OrderSerializer,ProductReviewSerializerwithReply
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth import get_user_model
+from django.db.models import Avg, Count
+User=get_user_model()
 def test(request):
     return HttpResponse("Hello, this is a test view from the product app.")
 
@@ -19,9 +22,9 @@ class ProductCreateAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        serializer = ProductSerializer(data=request.data)
+        serializer = ProductSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(seller=request.user)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class ProductListAPIView(APIView):
@@ -58,5 +61,144 @@ class ProductDetailAPIView(APIView):
         product.delete()
         return Response({"detail": "Deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
     
+
+class ProductSearchAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        query = request.query_params.get('q', '')
+        if not query:
+            return Response({"detail": "Query parameter 'q' is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        products = Product.objects.filter(name__icontains=query, seller=request.user)
+        serializer = ProductSerializer(products, many=True)
+        return Response(serializer.data)   
+    
+
+class OrderCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            product_data = request.data.get("products")  # Expect list of {product_id, quantity}
+            if not product_data:
+                return Response({"error": "No products provided."}, status=400)
+
+            order = Order.objects.create(user=request.user)
+
+            for item in product_data:
+                product_id = item.get("product_id")
+                quantity = item.get("quantity", 1)
+
+                try:
+                    product = Product.objects.get(id=product_id)
+                except Product.DoesNotExist:
+                    order.delete()
+                    return Response({"error": f"Product with ID {product_id} not found."}, status=404)
+
+                OrderItem.objects.create(order=order, product=product, quantity=quantity)
+
+            serializer = OrderSerializer(order)
+            return Response(serializer.data, status=201)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+        
+
+
+class OrderlistAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        orders = Order.objects.filter(user=request.user)
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
+    
+
+class ProductReviewCreateAPIView(APIView):
+    permission_classes=[IsAuthenticated]
+    def post(self,request,product_id):
+        product=get_object_or_404(Product,id=product_id)
+        if ProductReview.objects.filter(product=product, user=request.user).exists():
+            return Response(
+                {"detail": "You have already reviewed this product."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        serializer=ProductReviewSerializerwithReply(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user,product=product)
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+
+from django.utils import timezone
+
+class SellerReplyReviewAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, review_id):
+        review = get_object_or_404(ProductReview, id=review_id)
+
+        # ✅ Ensure only the seller can reply
+        if review.product.seller != request.user:
+            return Response({"detail": "Only the seller can reply to this review."}, status=status.HTTP_403_FORBIDDEN)
+
+        reply_text = request.data.get('seller_reply')
+        if not reply_text:
+            return Response({"detail": "Missing 'seller_reply'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        review.seller_reply = reply_text
+        review.replyed_at = timezone.now()
+        review.save()
+
+        return Response({"message": "Reply added successfully."}, status=status.HTTP_200_OK)
+
+
+     
+
+
+class ProductReviewListAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, product_id):
+        product = Product.objects.get(id=product_id)
+        reviews = product.reviews.all()
+        serializer = ProductReviewSerializerwithReply(reviews, many=True)
+
+        stats = product.reviews.aggregate(
+            average_rating=Avg('rating'),
+            total_reviews=Count('id')
+        )
+
+        return Response({
+            "reviews": serializer.data,
+            "average_rating": stats["average_rating"],
+            "total_reviews": stats["total_reviews"]
+        })
+    
+class ReportReviewAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, review_id):
+        review = get_object_or_404(ProductReview, id=review_id)
+
+        if review.product.seller != request.user:
+            return Response({"detail": "Only the seller can report this review."}, status=status.HTTP_403_FORBIDDEN)
+
+        reason = request.data.get('report_reason')
+        valid_reasons = dict(ProductReview.REPORT_REASONS).keys()
+
+        if reason not in valid_reasons:
+            return Response({
+                "detail": "Invalid report reason.",
+                "valid_choices": ProductReview.REPORT_REASONS
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        review.is_reported = True
+        review.report_reason = reason
+        review.save()
+
+        return Response({"message": "Review reported successfully."})
+
 
 
