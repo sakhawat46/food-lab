@@ -43,7 +43,14 @@ INSTALLED_APPS = [
     
     #created apps by sakhawat
     'apps.authentication',
+    'apps.seller',
+    'apps.seller_profile',
+    'apps.chatting',
+    'apps.crave',
+
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
+    'channels',
 ]
 
 # Rest Framework
@@ -53,6 +60,15 @@ REST_FRAMEWORK = {
     ),
 }
 
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
 
 
 MIDDLEWARE = [
@@ -141,3 +157,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+
+ASGI_APPLICATION = "project.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"  # Use Redis in production
+    }
+}
