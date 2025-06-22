@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'apps.seller_profile',
     'apps.chatting',
     'apps.crave',
+    'apps.notification',
 
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
@@ -160,8 +161,18 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 ASGI_APPLICATION = "project.asgi.application"
 
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels.layers.InMemoryChannelLayer"  # Use Redis in production
+#     }
+# }
+
+# Redis for Channels
 CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"  # Use Redis in production
-    }
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
 }
