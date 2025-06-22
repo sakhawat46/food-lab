@@ -11,6 +11,7 @@ urlpatterns = [
     path('api/v1/', include('apps.seller_profile.urls')),
     path('api/v1/', include('apps.chatting.urls')),
     path('api/v1/', include('apps.crave.urls')),
+    path('api/v1/', include('apps.notification.urls')),
 ]
 
 
