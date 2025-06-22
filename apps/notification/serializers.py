@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Notification
+from .models import DeviceToken
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -8,9 +9,6 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 
 
-# serializers.py
-from rest_framework import serializers
-from .models import DeviceToken
 
 class DeviceTokenSerializer(serializers.ModelSerializer):
     class Meta:
