@@ -177,8 +177,3 @@ CHANNEL_LAYERS = {
 #         },
 #     },
 # }
-
-
-
-
-# FCM_SERVER_KEY = "AIzaSyBzBNQbcqYy65ZXOTMVTgJ8lFrFHUJ8sgs"
