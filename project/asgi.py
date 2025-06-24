@@ -1,13 +1,19 @@
-# import os
-# import django
-# from channels.routing import ProtocolTypeRouter, URLRouter
-# from django.core.asgi import get_asgi_application
-# from channels.auth import AuthMiddlewareStack  # Optional: fallback
-# from middleware.jwt_auth import JWTAuthMiddleware
-# from apps.chatting.routing import websocket_urlpatterns
+import os
+import django
 
-# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "project.settings")
-# django.setup()
+# Set settings module first
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "project.settings")
+
+# Setup Django BEFORE importing anything from your app
+django.setup()
+
+# Now import other stuff
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.auth import AuthMiddlewareStack
+from apps.chatting.middleware import JWTAuthMiddleware
+from django.core.asgi import get_asgi_application
+from apps.chatting.routing import websocket_urlpatterns
+
 
 # application = ProtocolTypeRouter({
 #     "http": get_asgi_application(),
@@ -17,11 +23,9 @@
 # })
 
 
-# asgi.py
-import os
-import django
-from channels.routing import get_default_application
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')
-django.setup()
-application = get_default_application()
+application = ProtocolTypeRouter({
+    "http": get_asgi_application(),
+    "websocket": JWTAuthMiddleware(
+        URLRouter(websocket_urlpatterns)
+    ),
+})

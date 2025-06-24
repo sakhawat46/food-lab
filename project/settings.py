@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'apps.chatting',
     'apps.crave',
     'apps.notification',
+    'apps.customer_profile',
 
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
@@ -161,18 +162,14 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 ASGI_APPLICATION = "project.asgi.application"
 
-# CHANNEL_LAYERS = {
-#     "default": {
-#         "BACKEND": "channels.layers.InMemoryChannelLayer"  # Use Redis in production
-#     }
-# }
-
-# Redis for Channels
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [('127.0.0.1', 6379)],
-        },
-    },
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"  # Use Redis in production
+    }
 }
+
+
+
+import os
+
+FIREBASE_CRED_PATH = os.getenv("FIREBASE_CRED_PATH", "food-lab-firebase.json")

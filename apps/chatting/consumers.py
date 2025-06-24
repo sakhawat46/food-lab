@@ -17,14 +17,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         room = await self.get_room(self.room_id)
-        if not room or self.user not in [room.customer, room.seller]:
+
+        # Use `.customer_id` and `.seller_id` here (safe in async)
+        if not room or self.user.id not in [room.customer_id, room.seller_id]:
             await self.close()
             return
 
+        self.room = room  # Save for reuse in receive
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
+        print(f"WebSocket disconnected: {close_code}")
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
@@ -35,11 +39,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if not message:
                 return  # ignore empty messages
 
-            room = await self.get_room(self.room_id)
-            if not room or self.user not in [room.customer, room.seller]:
-                return  # Unauthorized
-
-            chat = await self.create_message(room, self.user, message)
+            chat = await self.create_message(self.room, self.user, message)
 
             await self.channel_layer.group_send(
                 self.room_group_name,
