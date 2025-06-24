@@ -9,8 +9,8 @@ from django.conf import settings
 
 if not firebase_admin._apps:
     # cred = credentials.Certificate(cred_path)
-    cred = credentials.Certificate("D:/Sakhawat/Django_Project/food_lab/food-lab-firebase.json")
-    # cred = credentials.Certificate("D:/Sakhawat/Django_Project/food_lab/foodlab.json")
+    # cred = credentials.Certificate("D:/Sakhawat/Django_Project/food_lab/food-lab-firebase.json")
+    cred = credentials.Certificate(settings.FIREBASE_CRED_PATH)
     firebase_admin.initialize_app(cred)
 
 def send_push_notification(user, title, message):
