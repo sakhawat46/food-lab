@@ -5,6 +5,9 @@ from rest_framework import status
 from .models import ChatRoom, ChatMessage
 from .serializers import ChatRoomSerializer, ChatMessageSerializer
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class ChatRoomListCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -24,6 +27,12 @@ class ChatRoomListCreateView(APIView):
 
         if request.user.user_type != 'customer':
             return Response({"error": "Only customers can initiate chat."}, status=403)
+        
+        # Validate seller
+        try:
+            seller = User.objects.get(id=seller_id, user_type='seller')
+        except User.DoesNotExist:
+            return Response({"error": "Seller not found."}, status=400)
 
         room, created = ChatRoom.objects.get_or_create(
             customer_id=customer_id,

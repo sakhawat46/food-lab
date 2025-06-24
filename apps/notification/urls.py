@@ -1,8 +1,8 @@
 from django.urls import path
-from .views import NotificationListAPIView, TriggerNotificationView, DeviceTokenView
+from .views import NotificationListAPIView, MarkNotificationReadAPIView, DeviceTokenRegisterAPIView
 
 urlpatterns = [
     path('notifications/', NotificationListAPIView.as_view(), name='notification-list'),
-    path('save-token/', DeviceTokenView.as_view(), name='save-token'),
-    path('send-notification/', TriggerNotificationView.as_view(), name='send-notification'),
+    path('read/<int:pk>/', MarkNotificationReadAPIView.as_view(), name='notification-read'),
+    path('device-token/', DeviceTokenRegisterAPIView.as_view(), name='device-token'),
 ]

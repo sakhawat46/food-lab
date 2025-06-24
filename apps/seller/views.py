@@ -10,6 +10,7 @@ from .serializers import (
     ShopImageSerializer,
     ShopDocumentSerializer
 )
+from apps.notification.utils import create_notification
 
 
 
@@ -24,12 +25,33 @@ class ShopAPIView(APIView):
         serializer = ShopSerializer(shop)
         return Response(serializer.data)
 
+    
+
+
     def post(self, request):
+        print("DEBUG: User =>", request.user.email, "Type =>", request.user.user_type)
+        # Only sellers can create a shop
+        if request.user.user_type != 'seller':
+            return Response({"error": "Only sellers can create a shop."}, status=403)
+
+        # Check if the seller already has a shop
+        if hasattr(request.user, 'shop'):
+            return Response({"error": "You have already created a shop."}, status=400)
+
         serializer = ShopSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save(owner=request.user)
+            create_notification(
+                request.user,
+                "Store Created",
+                "Your store has been created successfully."
+            )
             return Response(serializer.data, status=201)
+
         return Response(serializer.errors, status=400)
+
+
+
 
     def put(self, request):
         shop = get_object_or_404(Shop, owner=request.user)
