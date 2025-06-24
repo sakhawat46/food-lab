@@ -12,7 +12,6 @@ urlpatterns = [
     path('reviews/<int:review_id>/reply/', views.SellerReplyReviewAPIView.as_view(), name='reply-review'),
     path('products/<int:product_id>/reviewss/', views.ProductReviewListAPIView.as_view()),
     path('reviews/<int:review_id>/report/', views.ReportReviewAPIView.as_view()),
-    path('orders/create/', views.OrderCreateAPIView.as_view(), name='create-order'),
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

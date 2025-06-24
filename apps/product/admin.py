@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Product, Cuisine, DietaryRestriction, Allergen,ProductImage, Order,ProductReview
+from .models import Product, Cuisine, DietaryRestriction, Allergen,ProductImage,ProductReview
 
 admin.site.register(Product)
 admin.site.register(Cuisine)

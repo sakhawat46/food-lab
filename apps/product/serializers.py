@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product,OrderItem,Order,ProductImage,ProductReview  # or whatever model you are using
+from .models import Product,ProductImage,ProductReview  # or whatever model you are using
 
 from django.contrib.auth import get_user_model
 
@@ -82,28 +82,11 @@ class ProductSerializer(serializers.ModelSerializer):
             ProductImage.objects.create(product=instance, image=image)
 
         return instance
-
     
-class OrderItemSerializer(serializers.ModelSerializer):
-    product_name = serializers.ReadOnlyField(source='product.name')
-
-    class Meta:
-        model = OrderItem
-        fields = ['product', 'product_name', 'quantity', 'total_price']
-
-class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True, read_only=True)
-    total_price = serializers.ReadOnlyField()
-
-    class Meta:
-        model = Order
-        fields = ['id', 'user', 'status', 'created_at', 'items', 'total_price']
-        read_only_fields = ['user', 'status', 'created_at']
-
 class ProductReviewSerializerwithReply(serializers.ModelSerializer):
     user=UserPublicSerializer(read_only=True)
     product=serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(),required=False)
     class Meta:
         model=ProductReview
-        fields=['id','product','user','rating','comment','created_at','seller_reply','replyed_at']
+        fields=['id','product','user','rating','comment','created_at','seller_reply','replyed_at','is_reported','report_reason']
         read_only_fields=['user','created_at','seller_reply','replyed_at']
