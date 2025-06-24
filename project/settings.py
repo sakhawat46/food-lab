@@ -56,6 +56,8 @@ INSTALLED_APPS = [
     'apps.seller_profile',
     'apps.chatting',
     'apps.crave',
+    'apps.notification',
+    'apps.customer_profile',
 
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
@@ -178,3 +180,9 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels.layers.InMemoryChannelLayer"  # Use Redis in production
     }
 }
+
+
+
+import os
+
+FIREBASE_CRED_PATH = os.getenv("FIREBASE_CRED_PATH", "food-lab-firebase.json")

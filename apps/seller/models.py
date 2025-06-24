@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from .utils import geocode_address
 
 User = get_user_model()
 
@@ -16,6 +17,21 @@ class Shop(models.Model):
     street = models.CharField(max_length=255)
     city = models.CharField(max_length=100)
     postcode = models.CharField(max_length=20)
+
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+
+    categories = models.ManyToManyField("ShopCategory", blank=True)
+
+
+    def save(self, *args, **kwargs):
+        if not self.latitude or not self.longitude:
+            full_address = f"{self.flat_house_number}, {self.street}, {self.city}, {self.postcode}"
+            lat, lon = geocode_address(full_address)
+            self.latitude = lat
+            self.longitude = lon
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return self.shop_name
@@ -62,3 +78,11 @@ class DriverDocument(models.Model):
 
     def __str__(self):
         return f"Driver Documents for {self.driver.email}"
+    
+
+
+class ShopCategory(models.Model):
+    name = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name

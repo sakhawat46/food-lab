@@ -1,6 +1,10 @@
 # Created by https://www.toptal.com/developers/gitignore/api/django
 # Edit at https://www.toptal.com/developers/gitignore?templates=django
 
+# Firebase & Google Services config files
+# Ignore all JSON files
+*.json
+food-lab-firebase.json
 ### Django ###
 *.log
 *.pot
