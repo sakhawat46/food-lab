@@ -7,3 +7,4 @@ from .models import *
 admin.site.register(Shop)
 admin.site.register(ShopImage)
 admin.site.register(ShopDocument)
+admin.site.register(ShopCategory)
