@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'apps.crave',
     'apps.notification',
     'apps.customer_profile',
+    'apps.dashboard',
 
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
