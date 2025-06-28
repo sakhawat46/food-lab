@@ -12,6 +12,12 @@ from rest_framework.generics import RetrieveUpdateAPIView
 from .models import SellerProfile, CustomerProfile
 from .serializers import SellerProfileSerializer, CustomerProfileSerializer
 
+from dj_rest_auth.registration.views import SocialLoginView
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from .serializers import CustomGoogleLoginSerializer
+from allauth.socialaccount.providers.oauth2.client import OAuth2Error
+from allauth.socialaccount.providers.apple.views import AppleOAuth2Adapter
+
 User = get_user_model()
 
 
@@ -175,3 +181,105 @@ class PasswordResetAPIView(APIView):
             {"success": False, "errors": serializer.errors},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    
+
+
+
+
+#Google login view
+class GoogleLoginView(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+
+    def post(self, request, *args, **kwargs):
+        try:
+            response = super().post(request, *args, **kwargs)
+
+            user = self.user  # Set by SocialLoginView
+            if not user.user_type:
+                user_type = request.data.get("user_type")
+                if user_type not in ['seller', 'customer']:
+                    return Response({"error": "user_type is required (seller/customer)"}, status=status.HTTP_400_BAD_REQUEST)
+                user.user_type = user_type
+                user.save()
+
+                # Create default profile
+                if user_type == "customer" and not hasattr(user, 'customer_profile'):
+                    CustomerProfile.objects.create(user=user, first_name="", last_name="", mobile_number="")
+                elif user_type == "seller" and not hasattr(user, 'seller_profile'):
+                    SellerProfile.objects.create(user=user, name="", mobile_number="")
+
+            
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    # "name": user.name,
+                    "user_type": user.user_type,
+                }
+            })
+        
+        except OAuth2Error as e:
+            return Response({
+                "error": "Access token expired or invalid. Please login again.",
+                "detail": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+# class GoogleLoginView(SocialLoginView):
+#     adapter_class = GoogleOAuth2Adapter
+#     serializer_class = CustomGoogleLoginSerializer  # your custom serializer
+
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             # Call parent post logic (token validation + login)
+#             super_response = super().post(request, *args, **kwargs)
+
+#             user = self.serializer.validated_data.get('user') or getattr(self.serializer, 'user', None)
+#             if not user:
+#                 return Response({"detail": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+#             refresh = RefreshToken.for_user(user)
+#             return Response({
+#                 "access": str(refresh.access_token),
+#                 "refresh": str(refresh),
+#                 "user": {
+#                     "id": user.id,
+#                     "email": user.email,
+#                     "user_type": user.user_type,
+#                     # Add other fields if needed
+#                 }
+#             })
+        
+#         except OAuth2Error as e:
+#             return Response({
+#                 "error": "Access token expired or invalid. Please login again.",
+#                 "detail": str(e)
+#             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+#Apple Login View
+class AppleLoginView(SocialLoginView):
+    adapter_class = AppleOAuth2Adapter
+
+    def post(self, request, *args, **kwargs):
+        try:
+            if not request.data.get("id_token"):
+                return Response({"error": "id_token is required"}, status=400)
+            return super().post(request, *args, **kwargs)
+            response = super().post(request, *args, **kwargs)
+            user = self.user
+            print(user)
+
+        except OAuth2Error as e:
+            return Response({
+                "error": "Access token expired or invalid. Please login again.",
+                "detail": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
