@@ -1,7 +1,7 @@
 # models.py
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from apps.authentication.models import User
+from apps.authentication.models import User,CustomerProfile
 from apps.product.models import Product
 from decimal import Decimal
 ORDER_STATUS = [
@@ -40,7 +40,7 @@ class Order(models.Model):
     rejection_reason = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"Order #{self.id} - {self.customer.username}"
+        return f"Order #{self.id} - {self.customer}"
 
     def calculate_totals(self):
         TAX_RATE = Decimal('0.10')
@@ -70,5 +70,6 @@ class OrderFeedback(models.Model):
     rating = models.PositiveIntegerField()
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
 
 
