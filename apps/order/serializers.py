@@ -43,5 +43,13 @@ class SellerOrderUpadteSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Rejection reason is required when order is rejected.")
             return attrs
         
+class SellerOrderShortSummarySeria(serializers.ModelSerializer):
+    customer=serializers.CharField(source='customer.email')
+    class Meta:
+        model=Order
+        fields=['id','order_id','customer','grand_total','created_at']
+
+
+        
         
 

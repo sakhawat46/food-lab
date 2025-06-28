@@ -9,8 +9,7 @@ urlpatterns = [
 
     # Seller
     path('seller/orders/', SellerOrderListAPIView.as_view()),
-    path('seller/orders/<int:order_id>/approve/', OrderApproveAPIView.as_view()),
-    path('seller/orders/<int:order_id>/reject/', OrderRejectAPIView.as_view()),
-    path('seller/orders/<int:order_id>/complete/', OrderCompleteAPIView.as_view()),
     path('seller/orders/<int:pk>/update/', SellerOrderUpdateView.as_view(), name='seller-order-update'),
+    path('seller/orders/summary/',SellerOrderSummaryView.as_view(),name="seller_order_summary")
+
 ]

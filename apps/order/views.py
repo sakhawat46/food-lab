@@ -5,9 +5,10 @@ from django.shortcuts import get_object_or_404
 from .models import Order, OrderItem, OrderFeedback
 from apps.product.models import Product
 # from .serializers import OrderSerializer, OrderFeedbackSerializer
-from .serializers import OrderSerializer,OrderFeedbackSerializer,SellerOrderUpadteSerializer
+from .serializers import OrderSerializer,OrderFeedbackSerializer,SellerOrderUpadteSerializer,SellerOrderShortSummarySeria
 import uuid
 from rest_framework import generics, permissions
+from rest_framework.permissions import IsAuthenticated
 class CustomerOrderCreateAPIView(APIView):
     def post(self, request):
         user = request.user
@@ -59,30 +60,6 @@ class SellerOrderListAPIView(APIView):
 
         return Response(OrderSerializer(orders, many=True).data)
 
-class OrderApproveAPIView(APIView):
-    def post(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id)
-        order.status = 'approved'
-        order.rejection_reason = ''
-        order.save()
-        return Response({'status': 'approved'})
-
-class OrderRejectAPIView(APIView):
-    def post(self, request, order_id):
-        reason = request.data.get('reason', '')
-        order = get_object_or_404(Order, id=order_id)
-        order.status = 'rejected'
-        order.rejection_reason = reason
-        order.save()
-        return Response({'status': 'rejected', 'reason': reason})
-
-class OrderCompleteAPIView(APIView):
-    def post(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id)
-        order.status = 'completed'
-        order.save()
-        return Response({'status': 'completed'})
-
 # class CustomerUpdateOrderAPIView(APIView):
 #     def post(self,request,order_id):
 #         order=get_object_or_404(Order,id=order_id,customer_id=request.user.id)
@@ -119,5 +96,37 @@ class SellerOrderUpdateView(generics.UpdateAPIView):
 
     def patch(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
+    
+
+class SellerOrderSummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        seller = request.user
+
+        if seller.user_type != 'seller':
+            return Response({"error": "Only sellers can access this."}, status=403)
+
+        # Step 1: Get order IDs where the seller owns a product in the order
+        order_ids = OrderItem.objects.filter(
+            product__seller=seller
+        ).values_list('order_id', flat=True).distinct()
+
+        # Step 2: Fetch only those orders
+        orders = Order.objects.filter(id__in=order_ids)
+
+        # Step 3: Organize into status categories
+        status_keys = ['pending', 'approved', 'completed']
+        summary = {key: [] for key in status_keys}
+
+        for key in status_keys:
+            filtered_orders = orders.filter(status=key)
+            serializer = SellerOrderShortSummarySeria(filtered_orders, many=True)
+            summary[key] = serializer.data
+
+        return Response(summary)
+
+    
+
 
 
