@@ -218,3 +218,6 @@ class CheckoutView(APIView):
             "delivery_fee": DELIVERY_FEE,
             "grand_total": grand_total
         })
+
+
+
