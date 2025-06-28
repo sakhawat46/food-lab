@@ -5,6 +5,10 @@
 # Ignore all JSON files
 *.json
 food-lab-firebase.json
+
+food-lab-google-login.json
+
+
 ### Django ###
 *.log
 *.pot

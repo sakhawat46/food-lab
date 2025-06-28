@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from django.utils.timezone import now, timedelta
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from dj_rest_auth.registration.serializers import SocialLoginSerializer
 
 User = get_user_model()
 
@@ -175,3 +176,21 @@ class PasswordResetSerializer(serializers.Serializer):
         user.otp_verified = False  # Reset verification status
         user.save()
         return user
+
+
+
+
+# Social Login Serializer
+class CustomGoogleLoginSerializer(SocialLoginSerializer):
+    def validate(self, attrs):
+        validated_data = super().validate(attrs)
+        user = validated_data.get('user')  # Get user here
+
+        if user.user_type == 'seller' and not hasattr(user, 'seller_profile'):
+            SellerProfile.objects.create(user=user, name='name', mobile_number='0000000000')
+        elif user.user_type == 'customer' and not hasattr(user, 'customer_profile'):
+            CustomerProfile.objects.create(user=user, first_name='first name', last_name='last name', mobile_number='0000000000')
+
+        return validated_data
+
+

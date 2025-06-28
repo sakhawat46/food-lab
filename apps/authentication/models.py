@@ -77,7 +77,7 @@ class SellerProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.name
+        return self.user.email
     
 
 class CustomerProfile(models.Model):
@@ -93,4 +93,4 @@ class CustomerProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.first_name
+        return self.user.email
