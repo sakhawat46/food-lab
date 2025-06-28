@@ -59,11 +59,33 @@ INSTALLED_APPS = [
     'apps.crave',
     'apps.notification',
     'apps.customer_profile',
+    'apps.dashboard',
 
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'channels',
+
+
+    # Google login
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
+
+    #Apple Login
+    'allauth.socialaccount.providers.apple',
+
 ]
+
+
+# django.contrib.sites
+SITE_ID = 1
+
+
 INSTALLED_APPS += ['django_extensions']
 
 # Rest Framework
@@ -92,6 +114,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    #google login
+    "allauth.account.middleware.AccountMiddleware",
+
 ]
 
 ROOT_URLCONF = 'project.urls'
@@ -187,3 +213,46 @@ CHANNEL_LAYERS = {
 import os
 
 FIREBASE_CRED_PATH = os.getenv("FIREBASE_CRED_PATH", "food-lab-firebase.json")
+
+
+
+
+
+#Add for googlle login
+
+# AllAuth settings
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'optional'
+
+REST_USE_JWT = True
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+            'key': ''
+        },
+        'SCOPE': ['openid', 'profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+    }
+}
+
+
+
+#Apple Login
+
+SOCIALACCOUNT_PROVIDERS = {
+    'apple': {
+        'APP': {
+            'client_id': 'com.your.bundle.id',  # Services ID
+            'team_id': 'YOUR_APPLE_TEAM_ID',
+            'key_id': 'YOUR_KEY_ID',
+            'secret': '-----BEGIN PRIVATE KEY-----\nMIGTAgEAAoGBA...\n-----END PRIVATE KEY-----\n',
+        }
+    }
+}
