@@ -56,6 +56,9 @@ class SignupSerializer(serializers.Serializer):
         else:
             CustomerProfile.objects.create(user=user, first_name=validated_data['name'], mobile_number=validated_data['mobile_number'], last_name="")
 
+        # Generate and send OTP (email or mobile)
+        # user.generate_otp()
+
         return user
 
 
@@ -71,6 +74,10 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid credentials")
         if not user.is_active:
             raise serializers.ValidationError("User is inactive")
+        
+        # Add this check for OTP verification
+        # if not user.otp_verified:
+        #     raise serializers.ValidationError("OTP verification required before login")
 
         refresh = RefreshToken.for_user(user)
         return {
@@ -115,13 +122,13 @@ class PasswordResetRequestSerializer(serializers.Serializer):
         # Generate OTP and send via email
         user.generate_otp()
         print(user.otp)
-        # send_mail(
-        #     "Password Reset OTP",
-        #     f"Your OTP for password reset is {user.otp}",
-        #     "sakhawatdev5@gmail.com",  # Change this to your email
-        #     [user.email],
-        #     fail_silently=False,
-        # )
+        send_mail(
+            "Password Reset OTP",
+            f"Your OTP for password reset is {user.otp}",
+            "sakhawatdev5@gmail.com",
+            [user.email],
+            fail_silently=False,
+        )
         return value
 
 
@@ -194,3 +201,114 @@ class CustomGoogleLoginSerializer(SocialLoginSerializer):
         return validated_data
 
 
+
+
+#Mobile OTP Request Serializer
+class MobileOTPRequestSerializer(serializers.Serializer):
+    mobile_number = serializers.CharField()
+
+    def validate_mobile_number(self, value):
+        try:
+            user = User.objects.get(customer_profile__mobile_number=value)
+        except User.DoesNotExist:
+            try:
+                user = User.objects.get(seller_profile__mobile_number=value)
+            except User.DoesNotExist:
+                raise serializers.ValidationError("User with this mobile number does not exist.")
+
+        self.context['user'] = user
+        return value
+    
+
+class MobileOTPVerificationSerializer(serializers.Serializer):
+    mobile_number = serializers.CharField()
+    otp = serializers.CharField(max_length=6)
+
+    def validate(self, data):
+        try:
+            user = User.objects.get(
+                customer_profile__mobile_number=data["mobile_number"]
+            )
+        except User.DoesNotExist:
+            try:
+                user = User.objects.get(
+                    seller_profile__mobile_number=data["mobile_number"]
+                )
+            except User.DoesNotExist:
+                raise serializers.ValidationError({"mobile_number": "User not found."})
+
+        if user.otp != data["otp"]:
+            raise serializers.ValidationError({"otp": "Invalid OTP."})
+
+        if user.otp_exp < now():
+            raise serializers.ValidationError({"otp": "OTP expired."})
+
+        user.otp_verified = True
+        user.save()
+        return data
+    
+
+
+class MobilePasswordResetSerializer(serializers.Serializer):
+    mobile_number = serializers.CharField()
+    new_password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        try:
+            user = User.objects.get(customer_profile__mobile_number=data["mobile_number"])
+        except User.DoesNotExist:
+            try:
+                user = User.objects.get(seller_profile__mobile_number=data["mobile_number"])
+            except User.DoesNotExist:
+                raise serializers.ValidationError({"mobile_number": "User not found."})
+
+        if not user.otp_verified:
+            raise serializers.ValidationError({"otp": "OTP verification required."})
+
+        return data
+
+    def save(self, **kwargs):
+        try:
+            user = User.objects.get(customer_profile__mobile_number=self.validated_data["mobile_number"])
+        except User.DoesNotExist:
+            user = User.objects.get(seller_profile__mobile_number=self.validated_data["mobile_number"])
+
+        user.set_password(self.validated_data["new_password"])
+        user.otp = None
+        user.otp_exp = None
+        user.otp_verified = False
+        user.save()
+        return user
+
+
+
+
+
+
+#Contact Option Check Serializer
+class ContactOptionCheckSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User with this email does not exist.")
+
+        self.context['user'] = user
+        return value
+
+    def to_representation(self, instance):
+        user = self.context['user']
+        mobile = None
+
+        if hasattr(user, 'customer_profile'):
+            mobile = user.customer_profile.mobile_number
+        elif hasattr(user, 'seller_profile'):
+            mobile = user.seller_profile.mobile_number
+
+        return {
+            "success": True,
+            "email": user.email,
+            "mobile": mobile
+        }

@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from .serializers import PasswordResetRequestSerializer, OTPVerificationSerializer, PasswordResetSerializer
+from .serializers import PasswordResetRequestSerializer, OTPVerificationSerializer, PasswordResetSerializer, MobileOTPRequestSerializer, MobileOTPVerificationSerializer, MobilePasswordResetSerializer, ContactOptionCheckSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -132,7 +132,7 @@ class ChangePassword(generics.GenericAPIView):
 
 
 class PasswordResetRequestAPIView(APIView):
-    permission_classes = []
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -230,7 +230,7 @@ class GoogleLoginView(SocialLoginView):
 
 
 
-
+#Google Login with Serializer
 # class GoogleLoginView(SocialLoginView):
 #     adapter_class = GoogleOAuth2Adapter
 #     serializer_class = CustomGoogleLoginSerializer  # your custom serializer
@@ -283,3 +283,108 @@ class AppleLoginView(SocialLoginView):
                 "error": "Access token expired or invalid. Please login again.",
                 "detail": str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+
+
+
+
+
+# Mobile OTP Request View
+class MobileOTPRequestAPIView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        serializer = MobileOTPRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.context['user']
+            user.generate_otp()
+
+            print(user.otp)
+
+            return Response(
+                {"success": True, "message": "OTP sent to mobile number."},
+                status=status.HTTP_200_OK
+            )
+
+        return Response(
+            {"success": False, "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+
+# Mobile OTP Request View with API Key
+# class MobileOTPRequestAPIView(APIView):
+#     permission_classes = []
+
+#     def post(self, request):
+#         serializer = MobileOTPRequestSerializer(data=request.data)
+#         if serializer.is_valid():
+#             user = serializer.context['user']
+#             sms_response = user.generate_otp()
+
+#             if sms_response and sms_response.get("response_code") == "SUCCESS":
+#                 return Response(
+#                     {"success": True, "message": "OTP sent to mobile number."},
+#                     status=status.HTTP_200_OK
+#                 )
+#             else:
+#                 return Response(
+#                     {"success": False, "message": "Failed to send OTP. Please check number or API key."},
+#                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#                 )
+
+#         return Response(
+#             {"success": False, "errors": serializer.errors},
+#             status=status.HTTP_400_BAD_REQUEST
+#         )
+
+
+
+
+class MobileOTPVerificationAPIView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        serializer = MobileOTPVerificationSerializer(data=request.data)
+        if serializer.is_valid():
+            return Response(
+                {"success": True, "message": "OTP verified successfully."},
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            {"success": False, "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+class MobilePasswordResetAPIView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        serializer = MobilePasswordResetSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"success": True, "message": "Password reset successfully."},
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            {"success": False, "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+
+# Contact Option Check API View
+class ContactOptionCheckAPIView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        serializer = ContactOptionCheckSerializer(data=request.data)
+        if serializer.is_valid():
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(
+            {"success": False, "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
