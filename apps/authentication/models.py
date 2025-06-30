@@ -5,6 +5,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.utils import timezone
 from datetime import timedelta
 import random
+from .utils import send_otp_sms
 
 
 class UserManager(BaseUserManager):
@@ -55,6 +56,20 @@ class User(AbstractBaseUser, PermissionsMixin):
         self.otp_exp = timezone.now() + timedelta(minutes=10)
         self.otp_verified = False
         self.save()
+
+        # Find Mobile Number
+        mobile = None
+        if hasattr(self, 'customer_profile'):
+            mobile = self.customer_profile.mobile_number
+        elif hasattr(self, 'seller_profile'):
+            mobile = self.seller_profile.mobile_number
+
+        if mobile:
+            # send_otp_sms(mobile, self.otp)
+            response = send_otp_sms(mobile, self.otp)
+            return response
+
+
 
     def __str__(self):
         return self.email

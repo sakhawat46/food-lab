@@ -11,6 +11,8 @@ import calendar
 from apps.order.models import Order
 from apps.authentication.models import User
 
+
+
 class DashboardSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -19,19 +21,23 @@ class DashboardSummaryView(APIView):
         week_ago = today - timedelta(days=7)
         prev_week = today - timedelta(days=14)
 
+        total_orders = Order.objects.count()
+
+        total_customers = User.objects.filter(user_type='customer').count()
+
         current_orders = Order.objects.filter(created_at__date__gte=week_ago)
         previous_orders = Order.objects.filter(created_at__date__range=(prev_week, week_ago))
 
-        current_customers = User.objects.filter(date_joined__date__gte=week_ago, user_type='customer')
-        previous_customers = User.objects.filter(date_joined__date__range=(prev_week, week_ago), user_type='customer')
+        current_new_customers = User.objects.filter(date_joined__date__gte=week_ago, user_type='customer')
+        previous_new_customers = User.objects.filter(date_joined__date__range=(prev_week, week_ago), user_type='customer')
 
         order_change = ((current_orders.count() - previous_orders.count()) / max(previous_orders.count(), 1)) * 100
-        customer_change = ((current_customers.count() - previous_customers.count()) / max(previous_customers.count(), 1)) * 100
+        customer_change = ((current_new_customers.count() - previous_new_customers.count()) / max(previous_new_customers.count(), 1)) * 100
 
         return Response({
-            "total_orders": current_orders.count(),
+            "total_orders": total_orders,
             "total_orders_change": round(order_change),
-            "total_customers": current_customers.count(),
+            "total_customers": total_customers,
             "total_customers_change": round(customer_change)
         })
 
