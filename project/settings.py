@@ -218,9 +218,8 @@ FIREBASE_CRED_PATH = os.getenv("FIREBASE_CRED_PATH", "food-lab-firebase.json")
 
 
 
-#Add for googlle login
+#Add for google login
 
-# AllAuth settings
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
@@ -239,17 +238,10 @@ SOCIALACCOUNT_PROVIDERS = {
         },
         'SCOPE': ['openid', 'profile', 'email'],
         'AUTH_PARAMS': {'access_type': 'online'},
-    }
-}
-
-
-
-#Apple Login
-
-SOCIALACCOUNT_PROVIDERS = {
+    },
     'apple': {
         'APP': {
-            'client_id': 'com.your.bundle.id',  # Services ID
+            'client_id': 'com.your.bundle.id',
             'team_id': 'YOUR_APPLE_TEAM_ID',
             'key_id': 'YOUR_KEY_ID',
             'secret': '-----BEGIN PRIVATE KEY-----\nMIGTAgEAAoGBA...\n-----END PRIVATE KEY-----\n',

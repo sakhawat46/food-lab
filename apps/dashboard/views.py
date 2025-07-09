@@ -7,13 +7,34 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models.functions import TruncMonth
 from django.db.models.functions import ExtractMonth
 import calendar
+from rest_framework import status
 
 from apps.order.models import Order
 from apps.authentication.models import User
 
 
+class BaseAPIView(APIView):
+    def success_response(self, message="Your request Accepted", data=None, status_code= status.HTTP_200_OK):
+        return Response(
+            {
+            "success": True,
+            "message": message,
+            "status": status_code,
+            "data": data or {}
+            },
+            status=status_code )
+    def error_response(self, message="Your request rejected", data=None, status_code= status.HTTP_400_BAD_REQUEST):
+        return Response(
+            {
+            "success": False,
+            "message": message,
+            "status": status_code,
+            "data": data or {}
+            },
+            status=status_code )  
 
-class DashboardSummaryView(APIView):
+
+class DashboardSummaryView(BaseAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -22,7 +43,6 @@ class DashboardSummaryView(APIView):
         prev_week = today - timedelta(days=14)
 
         total_orders = Order.objects.count()
-
         total_customers = User.objects.filter(user_type='customer').count()
 
         current_orders = Order.objects.filter(created_at__date__gte=week_ago)
@@ -34,17 +54,22 @@ class DashboardSummaryView(APIView):
         order_change = ((current_orders.count() - previous_orders.count()) / max(previous_orders.count(), 1)) * 100
         customer_change = ((current_new_customers.count() - previous_new_customers.count()) / max(previous_new_customers.count(), 1)) * 100
 
-        return Response({
+        data = {
             "total_orders": total_orders,
             "total_orders_change": round(order_change),
             "total_customers": total_customers,
             "total_customers_change": round(customer_change)
-        })
+        }
+
+        return self.success_response(
+            message="Dashboard summary retrieved successfully.",
+            data=data,
+            status_code=status.HTTP_200_OK
+        )
 
 
 
-
-class RevenueChartView(APIView):
+class RevenueChartView(BaseAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -54,7 +79,6 @@ class RevenueChartView(APIView):
         if range_type == "monthly":
             current_year = today.year
 
-            # Get monthly revenue for current year
             queryset = (
                 Order.objects.filter(created_at__year=current_year)
                 .annotate(month=ExtractMonth("created_at"))
@@ -62,7 +86,6 @@ class RevenueChartView(APIView):
                 .annotate(total=Sum("grand_total"))
             )
 
-            # Build dict: {1: total, 2: total, ..., 12: total}
             month_totals = {item["month"]: float(item["total"]) for item in queryset}
 
             data = []
@@ -76,14 +99,18 @@ class RevenueChartView(APIView):
                     "amount": amount
                 })
 
-            return Response({
-                "range": "monthly",
-                "total_revenue": total_revenue,
-                "data": data
-            })
+            return self.success_response(
+                message="Monthly revenue chart generated.",
+                data={
+                    "range": "monthly",
+                    "total_revenue": total_revenue,
+                    "data": data
+                },
+                status_code=status.HTTP_200_OK
+            )
 
         # ---- Weekly fallback ----
-        start_date = today - timedelta(days=6)  # last 7 days including today
+        start_date = today - timedelta(days=6)
         total_revenue = 0
         data = []
 
@@ -100,15 +127,18 @@ class RevenueChartView(APIView):
                 "amount": amount
             })
 
-        return Response({
-            "range": "weekly",
-            "total_revenue": total_revenue,
-            "data": data
-        })
+        return self.success_response(
+            message="Weekly revenue chart generated.",
+            data={
+                "range": "weekly",
+                "total_revenue": total_revenue,
+                "data": data
+            },
+            status_code=status.HTTP_200_OK
+        )
 
 
-
-class CustomerChartView(APIView):
+class CustomerChartView(BaseAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -118,7 +148,6 @@ class CustomerChartView(APIView):
         if range_type == "monthly":
             current_year = today.year
 
-            # Get monthly customer counts for current year
             queryset = (
                 User.objects.filter(date_joined__year=current_year, user_type='customer')
                 .annotate(month=ExtractMonth("date_joined"))
@@ -126,7 +155,6 @@ class CustomerChartView(APIView):
                 .annotate(count=Count("id"))
             )
 
-            # Dict: {1: count, 2: count, ..., 12: count}
             month_counts = {item["month"]: item["count"] for item in queryset}
 
             data = []
@@ -138,10 +166,14 @@ class CustomerChartView(APIView):
                     "count": count
                 })
 
-            return Response({
-                "range": "monthly",
-                "data": data
-            })
+            return self.success_response(
+                message="Monthly customer chart generated.",
+                data={
+                    "range": "monthly",
+                    "data": data
+                },
+                status_code=status.HTTP_200_OK
+            )
 
         # ---- Weekly fallback ----
         start_date = today - timedelta(days=6)
@@ -154,11 +186,15 @@ class CustomerChartView(APIView):
                 user_type='customer'
             ).count()
             data.append({
-                "day": day.strftime("%a"),  # Mon, Tue, etc.
+                "day": day.strftime("%a"),
                 "count": count
             })
 
-        return Response({
-            "range": "weekly",
-            "data": data
-        })
+        return self.success_response(
+            message="Weekly customer chart generated.",
+            data={
+                "range": "weekly",
+                "data": data
+            },
+            status_code=status.HTTP_200_OK
+        )
