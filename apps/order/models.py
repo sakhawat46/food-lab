@@ -25,17 +25,69 @@ Order_Tracking_Status = [
 #     )
 #     user_type = models.CharField(max_length=10, choices=USER_TYPES, default='customer')
 
+# class Order(models.Model):
+#     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+#     Tracking_Status=models.CharField(max_length=50,choices=Order_Tracking_Status,default='Order placed and confirmed')
+#     order_id=models.CharField(auto_created=True, max_length=20, unique=True)
+#     status = models.CharField(max_length=20, choices=ORDER_STATUS, default='pending')
+#     note = models.TextField(blank=True, null=True)
+#     payment_status = models.CharField(max_length=30, choices=[
+#         ('unpaid', 'Unpaid'),
+#         ('paid', 'Paid'),
+#         ('failed', 'Failed'),
+#         ('refunded', 'Refunded'),
+#     ], default='unpaid')
+#     stripe_payment_intent_id = models.CharField(max_length=100, blank=True, null=True)
+#     payment_method = models.CharField(max_length=50, default='cash_on_delivery')
+#     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+#     delivery_fee = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+#     tax = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+#     grand_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     rejection_reason = models.TextField(blank=True, null=True)
+
+#     def __str__(self):
+#         return f"Order #{self.id} - {self.customer}"
+
+#     def calculate_totals(self):
+#         TAX_RATE = Decimal('0.10')
+#         DELIVERY_FEE = Decimal('50.00')
+
+#         item_total = sum(item.get_total_price() for item in self.items.all())
+#         tax_amount = item_total * TAX_RATE
+
+#         self.total_price = item_total
+#         self.tax = tax_amount
+#         self.delivery_fee = DELIVERY_FEE
+#         self.grand_total = item_total + tax_amount + DELIVERY_FEE
+#         self.save()
+
+from django.db import models
+
+
+
 class Order(models.Model):
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    Tracking_Status=models.CharField(max_length=50,choices=Order_Tracking_Status,default='Order placed and confirmed')
-    order_id=models.CharField(auto_created=True, max_length=20, unique=True)
+    Tracking_Status = models.CharField(max_length=50, choices=Order_Tracking_Status, default='Order placed and confirmed')
+    order_id = models.CharField(auto_created=True, max_length=20, unique=True)
     status = models.CharField(max_length=20, choices=ORDER_STATUS, default='pending')
     note = models.TextField(blank=True, null=True)
+    
+    payment_status = models.CharField(max_length=30, choices=[
+        ('unpaid', 'Unpaid'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    ], default='unpaid')
+    
+    stripe_payment_intent_id = models.CharField(max_length=100, blank=True, null=True)
     payment_method = models.CharField(max_length=50, default='cash_on_delivery')
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    delivery_fee = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
-    tax = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
-    grand_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    total_price = models.FloatField(default=0.0)
+    delivery_fee = models.FloatField(default=0.0)
+    tax = models.FloatField(default=0.0)
+    grand_total = models.FloatField(default=0.0)
+
     created_at = models.DateTimeField(auto_now_add=True)
     rejection_reason = models.TextField(blank=True, null=True)
 
@@ -43,10 +95,10 @@ class Order(models.Model):
         return f"Order #{self.id} - {self.customer}"
 
     def calculate_totals(self):
-        TAX_RATE = Decimal('0.10')
-        DELIVERY_FEE = Decimal('50.00')
+        TAX_RATE = 0.10
+        DELIVERY_FEE = 50.00
 
-        item_total = sum(item.get_total_price() for item in self.items.all())
+        item_total = sum(float(item.get_total_price()) for item in self.items.all())
         tax_amount = item_total * TAX_RATE
 
         self.total_price = item_total

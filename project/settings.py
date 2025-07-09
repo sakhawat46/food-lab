@@ -31,13 +31,13 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'unfold',
-    "unfold.contrib.filters",  # optional, if special filters are needed
-    "unfold.contrib.forms",  # optional, if special form elements are needed
-    "unfold.contrib.inlines",  # optional, if special inlines are needed
-    "unfold.contrib.import_export",  # optional, if django-import-export package is used
-    "unfold.contrib.guardian",  # optional, if django-guardian package is used
-    "unfold.contrib.simple_history",
+    # 'unfold',
+    # "unfold.contrib.filters",  # optional, if special filters are needed
+    # "unfold.contrib.forms",  # optional, if special form elements are needed
+    # "unfold.contrib.inlines",  # optional, if special inlines are needed
+    # "unfold.contrib.import_export",  # optional, if django-import-export package is used
+    # "unfold.contrib.guardian",  # optional, if django-guardian package is used
+    # "unfold.contrib.simple_history",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -266,3 +266,43 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'sakhawatdev5@gmail.com'
 EMAIL_HOST_PASSWORD = 'msbk ayjd kacg eigo'  # Gmail app password
+
+
+STRIPE_SECRET_KEY='sk_test_51RUbPDRfX6BK6CwpKO9Ku6278qvgUCggqwyhTUuLIljS00TXAfTPE5wupyptxvCxFY2kFoyDOsxD3UilC4KyN6lt002d7LtWVv'
+STRIPE_PUBLISHABLE_KEY='pk_test_51RUbPDRfX6BK6Cwp1yY1xyiqJReWEOSF08DeOe9Q9Xrg9rr4mOKgf48sEOIOm6rQ1v3RiKvD1SQ07JRBpSiJq5HR00fkfPXcvE'
+STRIPE_WEBHOOK_SECRET = 'whsec_c5176f209b30fe3c8d0066538e7c635c2b05168463b0a3f1f9921c947c6543c9'
+
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,  # keep Django's default logs
+    'formatters': {
+        'simple': {
+            'format': '[{levelname}] {asctime} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',  # or DEBUG for more logs
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'cart': {  # 👈 change to your Django app name
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
