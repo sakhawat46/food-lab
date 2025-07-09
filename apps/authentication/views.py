@@ -21,73 +21,79 @@ from allauth.socialaccount.providers.apple.views import AppleOAuth2Adapter
 User = get_user_model()
 
 
-class SignupView(APIView):
+class BaseAPIView(APIView):
+    def success_response(self, message="Your request Accepted", data=None, status_code= status.HTTP_200_OK):
+        return Response(
+            {
+            "success": True,
+            "message": message,
+            "status": status_code,
+            "data": data or {}
+            },
+            status=status_code )
+    def error_response(self, message="Your request rejected", data=None, status_code= status.HTTP_400_BAD_REQUEST):
+        return Response(
+            {
+            "success": False,
+            "message": message,
+            "status": status_code,
+            "data": data or {}
+            },
+            status=status_code )  
+
+
+
+class SignupView(BaseAPIView):
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.success_response("User created successfully.")
+        return self.error_response("Validation error", data=serializer.errors)
 
 
-class LoginView(APIView):
+
+class LoginView(BaseAPIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
-            return Response(serializer.validated_data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.success_response("Login successful", data=serializer.validated_data)
+        return self.error_response("Invalid credentials", data=serializer.errors)
 
 
 
 
-class LogoutView(APIView):
+
+class LogoutView(BaseAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
             refresh_token = request.data.get("refresh")
-            if refresh_token is None:
-                response_error = {
-                    "success": False,
-                    "status": status.HTTP_400_BAD_REQUEST,
-                    "message": "Refresh token is required",
-                    "errors": {"error": ["Refresh token is required."]},
-                }
-                return Response(response_error, status=status.HTTP_400_BAD_REQUEST)
+            if not refresh_token:
+                return self.error_response("Refresh token is required")
 
             token = RefreshToken(refresh_token)
             token.blacklist()
-
-            response_data = {
-                "success": True,
-                "status": status.HTTP_205_RESET_CONTENT,
-                "message": "Successfully logged out.",
-            }
-
-            return Response(response_data, status=status.HTTP_205_RESET_CONTENT)
+            return self.success_response("Successfully logged out.", status_code=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
-            response_error = {
-                "success": False,
-                "status": status.HTTP_400_BAD_REQUEST,
-                "message": "Error occured",
-                "errors": {"error": [str(e)]},
-            }
-            return Response(response_error, status=status.HTTP_400_BAD_REQUEST)
+            return self.error_response("Logout failed", data={"error": [str(e)]})
 
 
 
-class ProfileViewEdit(APIView):
+
+
+
+class ProfileViewEdit(BaseAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
         if user.user_type == 'seller':
-            profile = user.seller_profile
-            serializer = SellerProfileSerializer(profile)
+            serializer = SellerProfileSerializer(user.seller_profile)
         else:
-            profile = user.customer_profile
-            serializer = CustomerProfileSerializer(profile)
-        return Response(serializer.data)
+            serializer = CustomerProfileSerializer(user.customer_profile)
+        return self.success_response("Profile retrieved successfully", serializer.data)
 
     def put(self, request):
         user = request.user
@@ -98,134 +104,185 @@ class ProfileViewEdit(APIView):
 
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Profile updated successfully", "data": serializer.data})
-        return Response(serializer.errors, status=400)
+            return self.success_response("Profile updated successfully", serializer.data)
+        return self.error_response("Update failed", serializer.errors)
 
 
 
 
-class ChangePassword(generics.GenericAPIView):
+
+class ChangePassword(BaseAPIView, generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ChangePasswordSerializer
 
     def put(self, request):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            return self.error_response("Validation error", data=serializer.errors)
 
+        user = request.user
         old_password = serializer.validated_data["old_password"]
         new_password = serializer.validated_data["new_password"]
 
-        try:
-            obj = request.user
-            print(obj)
-        except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=404)
+        if not user.check_password(old_password):
+            return self.error_response("Old password does not match")
 
-        if not obj.check_password(old_password):
-            return Response({"error": "Old password does not match"}, status=400)
-
-        obj.set_password(new_password)
-        obj.save()
-        return Response({"success": "Password changed successfully"}, status=200)
+        user.set_password(new_password)
+        user.save()
+        return self.success_response("Password changed successfully")
 
 
 
 
-class PasswordResetRequestAPIView(APIView):
-    permission_classes = [permissions.AllowAny]
+
+class PasswordResetRequestAPIView(BaseAPIView):
+    permission_classes = []
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
         if serializer.is_valid():
-            return Response(
-                {"success": True, "message": "OTP sent to email."}, 
-                status=status.HTTP_200_OK
-            )
-        return Response(
-            {"success": False, "errors": serializer.errors}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
+            return self.success_response("OTP sent to email.")
+        return self.error_response("Validation error", serializer.errors)
 
 
 
-class OTPVerificationAPIView(APIView):
+
+class OTPVerificationAPIView(BaseAPIView):
     permission_classes = []
 
     def post(self, request):
         serializer = OTPVerificationSerializer(data=request.data)
         if serializer.is_valid():
-            return Response(
-                {"success": True, "message": "OTP verified successfully."},
-                status=status.HTTP_200_OK,
-            )
-        return Response(
-            {"success": False, "errors": serializer.errors},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+            return self.success_response("OTP verified successfully.")
+        return self.error_response("Invalid OTP", serializer.errors)
 
 
 
 
-class PasswordResetAPIView(APIView):
+
+class PasswordResetAPIView(BaseAPIView):
     permission_classes = []
 
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(
-                {"success": True, "message": "Password reset successfully."},
-                status=status.HTTP_200_OK,
-            )
-        return Response(
-            {"success": False, "errors": serializer.errors},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+            return self.success_response("Password reset successfully.")
+        return self.error_response("Reset failed", serializer.errors)
+
     
 
 
 
 
 #Google login view
-class GoogleLoginView(SocialLoginView):
+# class GoogleLoginView(SocialLoginView):
+#     adapter_class = GoogleOAuth2Adapter
+
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             response = super().post(request, *args, **kwargs)
+
+#             user = self.user  # Set by SocialLoginView
+            
+#             if not user.user_type:
+#                 user_type = request.data.get("user_type")
+#                 if user_type not in ['seller', 'customer']:
+#                     return Response({
+#                         "success": False,
+#                         "message": "user_type is required (seller/customer)",
+#                         "status": status.HTTP_400_BAD_REQUEST,
+#                         "data": {}
+#                     }, status=status.HTTP_400_BAD_REQUEST)
+
+#                 user.user_type = user_type
+#                 user.save()
+
+#                 # Create default profile
+#                 if user_type == "customer" and not hasattr(user, 'customer_profile'):
+#                     CustomerProfile.objects.create(user=user, first_name="", last_name="", mobile_number="")
+#                 elif user_type == "seller" and not hasattr(user, 'seller_profile'):
+#                     SellerProfile.objects.create(user=user, name="", mobile_number="")
+
+#             refresh = RefreshToken.for_user(user)
+
+#             return Response({
+#                 "success": True,
+#                 "message": "Google login successful.",
+#                 "status": status.HTTP_200_OK,
+#                 "data": {
+#                     "access": str(refresh.access_token),
+#                     "refresh": str(refresh),
+#                     "user": {
+#                         "id": user.id,
+#                         "email": user.email,
+#                         "user_type": user.user_type,
+#                     }
+#                 }
+#             }, status=status.HTTP_200_OK)
+
+#         except OAuth2Error as e:
+#             return Response({
+#                 "success": False,
+#                 "message": "Access token expired or invalid. Please login again.",
+#                 "status": status.HTTP_400_BAD_REQUEST,
+#                 "data": {"detail": str(e)}
+#             }, status=status.HTTP_400_BAD_REQUEST)
+
+class GoogleLoginView(BaseAPIView, SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
 
     def post(self, request, *args, **kwargs):
         try:
             response = super().post(request, *args, **kwargs)
-
             user = self.user  # Set by SocialLoginView
+
             if not user.user_type:
                 user_type = request.data.get("user_type")
                 if user_type not in ['seller', 'customer']:
-                    return Response({"error": "user_type is required (seller/customer)"}, status=status.HTTP_400_BAD_REQUEST)
+                    return self.error_response(
+                        message="user_type is required (seller/customer)",
+                        status_code=status.HTTP_400_BAD_REQUEST
+                    )
+
                 user.user_type = user_type
                 user.save()
 
                 # Create default profile
                 if user_type == "customer" and not hasattr(user, 'customer_profile'):
-                    CustomerProfile.objects.create(user=user, first_name="", last_name="", mobile_number="")
+                    CustomerProfile.objects.create(
+                        user=user, first_name="", last_name="", mobile_number=""
+                    )
                 elif user_type == "seller" and not hasattr(user, 'seller_profile'):
-                    SellerProfile.objects.create(user=user, name="", mobile_number="")
+                    SellerProfile.objects.create(
+                        user=user, name="", mobile_number=""
+                    )
 
-            
             refresh = RefreshToken.for_user(user)
-            return Response({
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    # "name": user.name,
-                    "user_type": user.user_type,
-                }
-            })
-        
+
+            return self.success_response(
+                message="Google login successful.",
+                data={
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "user_type": user.user_type,
+                    }
+                },
+                status_code=status.HTTP_200_OK
+            )
+
         except OAuth2Error as e:
-            return Response({
-                "error": "Access token expired or invalid. Please login again.",
-                "detail": str(e)
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return self.error_response(
+                message="Access token expired or invalid. Please login again.",
+                data={"detail": str(e)},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+
+
 
 
 
@@ -266,23 +323,42 @@ class GoogleLoginView(SocialLoginView):
 
 
 #Apple Login View
-class AppleLoginView(SocialLoginView):
+class AppleLoginView(BaseAPIView, SocialLoginView):
     adapter_class = AppleOAuth2Adapter
 
     def post(self, request, *args, **kwargs):
         try:
-            if not request.data.get("id_token"):
-                return Response({"error": "id_token is required"}, status=400)
-            return super().post(request, *args, **kwargs)
+            id_token = request.data.get("id_token")
+            if not id_token:
+                return self.error_response(
+                    message="id_token is required",
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+
             response = super().post(request, *args, **kwargs)
             user = self.user
-            print(user)
+
+            return self.success_response(
+                message="Apple login successful.",
+                data={
+                    "access": response.data.get("access_token"),
+                    "refresh": response.data.get("refresh_token"),
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "user_type": user.user_type,
+                    }
+                },
+                status_code=status.HTTP_200_OK
+            )
 
         except OAuth2Error as e:
-            return Response({
-                "error": "Access token expired or invalid. Please login again.",
-                "detail": str(e)
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return self.error_response(
+                message="Access token expired or invalid. Please login again.",
+                data={"detail": str(e)},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
         
 
 
@@ -299,17 +375,21 @@ class MobileOTPRequestAPIView(APIView):
             user = serializer.context['user']
             user.generate_otp()
 
-            print(user.otp)
+            print(user.otp)  # Only for debugging; remove in production
 
-            return Response(
-                {"success": True, "message": "OTP sent to mobile number."},
-                status=status.HTTP_200_OK
-            )
+            return Response({
+                "success": True,
+                "message": "OTP sent to mobile number.",
+                "status": status.HTTP_200_OK,
+                "data": {}
+            }, status=status.HTTP_200_OK)
 
-        return Response(
-            {"success": False, "errors": serializer.errors},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({
+            "success": False,
+            "message": "Validation failed.",
+            "status": status.HTTP_400_BAD_REQUEST,
+            "data": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -342,20 +422,30 @@ class MobileOTPRequestAPIView(APIView):
 
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
 class MobileOTPVerificationAPIView(APIView):
     permission_classes = []
 
     def post(self, request):
         serializer = MobileOTPVerificationSerializer(data=request.data)
         if serializer.is_valid():
-            return Response(
-                {"success": True, "message": "OTP verified successfully."},
-                status=status.HTTP_200_OK
-            )
-        return Response(
-            {"success": False, "errors": serializer.errors},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+            return Response({
+                "success": True,
+                "message": "OTP verified successfully.",
+                "status": status.HTTP_200_OK,
+                "data": {}
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "success": False,
+            "message": "OTP verification failed.",
+            "status": status.HTTP_400_BAD_REQUEST,
+            "data": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class MobilePasswordResetAPIView(APIView):
@@ -365,14 +455,20 @@ class MobilePasswordResetAPIView(APIView):
         serializer = MobilePasswordResetSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(
-                {"success": True, "message": "Password reset successfully."},
-                status=status.HTTP_200_OK
-            )
-        return Response(
-            {"success": False, "errors": serializer.errors},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+            return Response({
+                "success": True,
+                "message": "Password reset successfully.",
+                "status": status.HTTP_200_OK,
+                "data": {}
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "success": False,
+            "message": "Password reset failed.",
+            "status": status.HTTP_400_BAD_REQUEST,
+            "data": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 
@@ -383,8 +479,16 @@ class ContactOptionCheckAPIView(APIView):
     def post(self, request):
         serializer = ContactOptionCheckSerializer(data=request.data)
         if serializer.is_valid():
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(
-            {"success": False, "errors": serializer.errors},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+            return Response({
+                "success": True,
+                "message": "Contact option verified successfully.",
+                "status": status.HTTP_200_OK,
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "success": False,
+            "message": "Validation failed.",
+            "status": status.HTTP_400_BAD_REQUEST,
+            "data": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
