@@ -9,7 +9,31 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-class ChatRoomListCreateView(APIView):
+
+
+class BaseAPIView(APIView):
+    def success_response(self, message="Your request Accepted", data=None, status_code= status.HTTP_200_OK):
+        return Response(
+            {
+            "success": True,
+            "message": message,
+            "status": status_code,
+            "data": data or {}
+            },
+            status=status_code )
+    def error_response(self, message="Your request rejected", data=None, status_code= status.HTTP_400_BAD_REQUEST):
+        return Response(
+            {
+            "success": False,
+            "message": message,
+            "status": status_code,
+            "data": data or {}
+            },
+            status=status_code )  
+
+
+
+class ChatRoomListCreateView(BaseAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -18,52 +42,80 @@ class ChatRoomListCreateView(APIView):
             rooms = ChatRoom.objects.filter(seller=user)
         else:
             rooms = ChatRoom.objects.filter(customer=user)
+
         serializer = ChatRoomSerializer(rooms, many=True)
-        return Response(serializer.data)
+        return self.success_response(
+            message="Chat rooms retrieved successfully.",
+            data=serializer.data
+        )
 
     def post(self, request):
+        if request.user.user_type != 'customer':
+            return self.error_response(
+                message="Only customers can initiate chat.",
+                status_code=status.HTTP_403_FORBIDDEN
+            )
+
         seller_id = request.data.get('seller_id')
         customer_id = request.user.id
 
-        if request.user.user_type != 'customer':
-            return Response({"error": "Only customers can initiate chat."}, status=403)
-        
-        # Validate seller
         try:
             seller = User.objects.get(id=seller_id, user_type='seller')
         except User.DoesNotExist:
-            return Response({"error": "Seller not found."}, status=400)
+            return self.error_response(message="Seller not found.")
 
         room, created = ChatRoom.objects.get_or_create(
             customer_id=customer_id,
             seller_id=seller_id
         )
         serializer = ChatRoomSerializer(room)
-        return Response(serializer.data, status=201 if created else 200)
+        return self.success_response(
+            message="Chat room created." if created else "Chat room already exists.",
+            data=serializer.data,
+            status_code=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        )
 
 
-class ChatMessageListCreateView(APIView):
+
+class ChatMessageListCreateView(BaseAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, room_id):
         room = get_object_or_404(ChatRoom, id=room_id)
         if request.user not in [room.customer, room.seller]:
-            return Response({"error": "Not authorized"}, status=403)
+            return self.error_response(
+                message="Not authorized to access this chat room.",
+                status_code=status.HTTP_403_FORBIDDEN
+            )
 
         messages = room.messages.all().order_by('timestamp')
         serializer = ChatMessageSerializer(messages, many=True)
-        return Response(serializer.data)
+        return self.success_response(
+            message="Messages retrieved successfully.",
+            data=serializer.data
+        )
 
     def post(self, request, room_id):
         room = get_object_or_404(ChatRoom, id=room_id)
         if request.user not in [room.customer, room.seller]:
-            return Response({"error": "Not authorized"}, status=403)
+            return self.error_response(
+                message="Not authorized to send message in this room.",
+                status_code=status.HTTP_403_FORBIDDEN
+            )
 
         data = request.data.copy()
         data['sender'] = request.user.id
         data['room'] = room.id
+
         serializer = ChatMessageSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
+            return self.success_response(
+                message="Message sent successfully.",
+                data=serializer.data,
+                status_code=status.HTTP_201_CREATED
+            )
+        return self.error_response(
+            message="Message sending failed.",
+            data=serializer.errors
+        )
