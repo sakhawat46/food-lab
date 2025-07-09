@@ -4,6 +4,7 @@ from .views import *
 urlpatterns = [
     # Customer
     path('customer/orders/', CustomerOrderListAPIView.as_view()),
+    path('webhook/stripe/', StripeWebhookView.as_view(), name='stripe-webhook'),
     path('customer/orders/create/', CustomerOrderCreateAPIView.as_view()),
     path('customer/orders/<int:order_id>/feedback/', OrderFeedbackSubmitAPIView.as_view()),
 

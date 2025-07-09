@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product,ProductImage,ProductReview  # or whatever model you are using
+from .models import Product,ProductImage,ProductReview,Cuisine,DietaryRestriction,Allergen  # or whatever model you are using
 
 from django.contrib.auth import get_user_model
 
@@ -15,13 +15,28 @@ class ProductImageSerializer(serializers.ModelSerializer):
         model = ProductImage
         fields = ['id', 'image']
 
-# class ProductSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Product
-#         fields = '__all__'
+class CuisineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cuisine
+        fields = ['id', 'name']
+
+
+class DietaryRestrictionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DietaryRestriction
+        fields = ['id', 'name']
+
+
+class AllergenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Allergen
+        fields = ['id', 'name']
 
 class ProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
+    cuisine = CuisineSerializer(read_only=True)
+    dietary_restrictions = DietaryRestrictionSerializer(many=True, read_only=True)
+    allergens = AllergenSerializer(many=True, read_only=True)
     image_files = serializers.ListField(
         child=serializers.ImageField(), write_only=True, required=False
     )
@@ -90,3 +105,7 @@ class ProductReviewSerializerwithReply(serializers.ModelSerializer):
         model=ProductReview
         fields=['id','product','user','rating','comment','created_at','seller_reply','replyed_at','is_reported','report_reason']
         read_only_fields=['user','created_at','seller_reply','replyed_at']
+
+# serializers.py
+
+
