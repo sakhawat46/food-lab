@@ -1,0 +1,25 @@
+name: Auto Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deploy to server
+      uses: fifsky/ssh-action@master
+      with:
+        command: |
+          git config --global --add safe.directory /home/softvencealpha-smalltalk/htdocs/smalltalk.softvencealpha.com
+          cd /home/softvencealpha-smalltalk/htdocs/smalltalk.softvencealpha.com
+          git pull origin main
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python manage.py migrate
+          python manage.py collectstatic --noinput
+          sudo systemctl restart gunicorn-smalltalk.service
+        host: ${{ secrets.SERVER_IP }}
+        user: root
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
