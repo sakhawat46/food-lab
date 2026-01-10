@@ -31,13 +31,80 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    # 'unfold',
+    # "unfold.contrib.filters",  # optional, if special filters are needed
+    # "unfold.contrib.forms",  # optional, if special form elements are needed
+    # "unfold.contrib.inlines",  # optional, if special inlines are needed
+    # "unfold.contrib.import_export",  # optional, if django-import-export package is used
+    # "unfold.contrib.guardian",  # optional, if django-guardian package is used
+    # "unfold.contrib.simple_history",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+
+
+    'apps.product', 
+    'apps.order', 
+    'apps.cart',
+    
+    #created apps by sakhawat
+    'apps.authentication',
+    'apps.seller',
+    'apps.seller_profile',
+    'apps.chatting',
+    'apps.crave',
+    'apps.notification',
+    'apps.customer_profile',
+    'apps.dashboard',
+
+    'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
+    'channels',
+
+
+    # Google login
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
+
+    #Apple Login
+    'allauth.socialaccount.providers.apple',
+
 ]
+
+
+# django.contrib.sites
+SITE_ID = 1
+
+
+INSTALLED_APPS += ['django_extensions']
+
+# Rest Framework
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60000),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -47,9 +114,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    #google login
+    "allauth.account.middleware.AccountMiddleware",
+
 ]
 
 ROOT_URLCONF = 'project.urls'
+
+AUTH_USER_MODEL = 'authentication.User'
 
 TEMPLATES = [
     {
@@ -120,3 +193,108 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+
+ASGI_APPLICATION = "project.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"  # Use Redis in production
+    }
+}
+
+
+
+import os
+
+FIREBASE_CRED_PATH = os.getenv("FIREBASE_CRED_PATH", "food-lab-firebase.json")
+
+
+
+
+
+#Add for google login
+
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'optional'
+
+REST_USE_JWT = True
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+            'key': ''
+        },
+        'SCOPE': ['openid', 'profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+    },
+    'apple': {
+        'APP': {
+            'client_id': 'com.your.bundle.id',
+            'team_id': 'YOUR_APPLE_TEAM_ID',
+            'key_id': 'YOUR_KEY_ID',
+            'secret': '-----BEGIN PRIVATE KEY-----\nMIGTAgEAAoGBA...\n-----END PRIVATE KEY-----\n',
+        }
+    }
+}
+
+
+
+# Gmail SMTP server Settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Gmail SMTP server
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'sakhawatdev5@gmail.com'
+EMAIL_HOST_PASSWORD = 'msbk ayjd kacg eigo'  # Gmail app password
+
+
+STRIPE_SECRET_KEY='sk_test_51RUbPDRfX6BK6CwpKO9Ku6278qvgUCggqwyhTUuLIljS00TXAfTPE5wupyptxvCxFY2kFoyDOsxD3UilC4KyN6lt002d7LtWVv'
+STRIPE_PUBLISHABLE_KEY='pk_test_51RUbPDRfX6BK6Cwp1yY1xyiqJReWEOSF08DeOe9Q9Xrg9rr4mOKgf48sEOIOm6rQ1v3RiKvD1SQ07JRBpSiJq5HR00fkfPXcvE'
+STRIPE_WEBHOOK_SECRET = 'whsec_c5176f209b30fe3c8d0066538e7c635c2b05168463b0a3f1f9921c947c6543c9'
+
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,  # keep Django's default logs
+    'formatters': {
+        'simple': {
+            'format': '[{levelname}] {asctime} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',  # or DEBUG for more logs
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'cart': {  # 👈 change to your Django app name
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
