@@ -1,0 +1,2 @@
+# Projects Run for Fast API
+uvicorn project.asgi:app --reload
