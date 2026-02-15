@@ -1,31 +1,15 @@
 import os
-import django
+from django.core.asgi import get_asgi_application
+from starlette.applications import Starlette
+from starlette.routing import Mount
 
-# Set settings module first
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "project.settings")
 
-# Setup Django BEFORE importing anything from your app
-django.setup()
+django_asgi_app = get_asgi_application()
 
-# Now import other stuff
-from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.auth import AuthMiddlewareStack
-from apps.chatting.middleware import JWTAuthMiddleware
-from django.core.asgi import get_asgi_application
-from apps.chatting.routing import websocket_urlpatterns
+from apps.fastapi_app.app import fastapi_app
 
-
-# application = ProtocolTypeRouter({
-#     "http": get_asgi_application(),
-#     "websocket": AuthMiddlewareStack(
-#         URLRouter(websocket_urlpatterns)
-#     ),
-# })
-
-
-application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
-    "websocket": JWTAuthMiddleware(
-        URLRouter(websocket_urlpatterns)
-    ),
-})
+app = Starlette(routes=[
+    Mount("/fast", app=fastapi_app),   # আগে FastAPI
+    Mount("/", app=django_asgi_app),   # পরে Django (catch-all)
+])
